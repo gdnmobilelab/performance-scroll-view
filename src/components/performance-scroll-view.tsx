@@ -63,6 +63,22 @@ export class PerformanceScrollView extends Component<
         } as any;
     }
 
+    get isAtScrollBottom() {
+        if (!this.state.container) {
+            throw new Error("Cannot check if scroll is at bottom before the container is rendered");
+        }
+        if (this.state.totalHeight < this.state.container.clientHeight) {
+            return true;
+        }
+        return (
+            Math.abs(
+                this.state.totalHeight -
+                    this.state.container!.clientHeight -
+                    this.state.currentScrollPosition
+            ) <= 1
+        );
+    }
+
     renderChildItems() {
         if (!this.state.container) {
             // We have to use a two-stage rendering process because we need the container
@@ -71,13 +87,15 @@ export class PerformanceScrollView extends Component<
             return null;
         }
 
+        let container = this.state.container;
+
         let currentY = 0;
         if (
             this.props.addNewItemsTo == AddNewItemsTo.Bottom &&
-            this.state.totalHeight < this.state.container.clientHeight
+            this.state.totalHeight < container.clientHeight
         ) {
             let allItemHeight = this.state.itemHeights.reduce((a, b) => a + b, 0);
-            currentY = this.state.container.clientHeight - allItemHeight;
+            currentY = container.clientHeight - allItemHeight;
         }
 
         return React.Children.map(this.props.children, (child, idx) => {
@@ -86,8 +104,7 @@ export class PerformanceScrollView extends Component<
 
             if (height) {
                 let y = currentY - this.state.currentScrollPosition;
-                if (this.state.animation) {
-                    // console.log("apply offset", this.state.animation.currentOffset);
+                if (this.state.animation && this.isAtScrollBottom) {
                     y += this.state.animation.currentOffset;
                 }
 
@@ -271,13 +288,6 @@ export class PerformanceScrollView extends Component<
             state => {
                 state.itemHeights[index] = height;
 
-                console.log(
-                    "Added item at",
-                    height,
-                    "total height now",
-                    state.totalHeight + height
-                );
-
                 let animation: ScrollViewAnimation | undefined = undefined;
 
                 if (this.props.animationDuration) {
@@ -299,11 +309,9 @@ export class PerformanceScrollView extends Component<
 
                 let newTotal = state.totalHeight + height;
                 let scrollPosition = state.currentScrollPosition;
-                if (
-                    this.props.addNewItemsTo == AddNewItemsTo.Bottom &&
-                    newTotal > this.state.container!.clientHeight
-                ) {
-                    scrollPosition = newTotal - this.state.container!.clientHeight + 1;
+
+                if (this.props.addNewItemsTo == AddNewItemsTo.Bottom && this.isAtScrollBottom) {
+                    scrollPosition = newTotal - state.container!.clientHeight + 1;
                 }
 
                 return {
