@@ -2,28 +2,34 @@ import { Component } from "react";
 import * as React from "react";
 import { ScrollViewItem } from "./scroll-view-item";
 import {
-    dummyScrollContainerStyles,
     scrollViewStyles
     // childContainerStyles
 } from "./scroll-view-styles";
+// import { /*ForwardsIndicator,*/ BackwardsIndicator } from "./paging-indicator";
+import { ItemBuffer, ItemBufferProperties } from "./item-buffer";
+// import { IdleWatcher } from "./idle-watcher";
+import { DummyScroller } from "./dummy-scroller";
 
 export enum AddNewItemsTo {
     Top = "top",
     Bottom = "bottom"
 }
 
-interface PerformanceScrollViewProperties {
+type AnimationEasingFunction = (
+    currentTime: number,
+    initialValue: number,
+    changeInValue: number,
+    duration: number
+) => number;
+
+export interface PerformanceScrollViewProperties extends ItemBufferProperties {
     id?: string;
     className?: string;
     style?: React.CSSProperties;
     addNewItemsTo?: AddNewItemsTo;
     animationDuration?: number;
-    animationEaseFunction?: (
-        currentTime: number,
-        initialValue: number,
-        changeInValue: number,
-        duration: number
-    ) => number;
+    animationEaseFunction?: AnimationEasingFunction;
+    startIndex?: number;
 }
 
 interface ScrollViewAnimation {
@@ -32,35 +38,68 @@ interface ScrollViewAnimation {
     endTime: number;
 }
 
-interface PerformanceScrollViewState {
+export interface PerformanceScrollViewState {
+    itemBuffer: JSX.Element[];
+    currentBufferOffset: number;
     container?: HTMLDivElement;
     mergedContainerStyles: React.CSSProperties;
-    itemHeights: number[];
+    itemHeights: Map<number, number>;
     totalHeight: number;
     currentScrollPosition: number;
     animation?: ScrollViewAnimation;
+    isInitialRenderLoop: boolean;
+    awaitingItemSizes: boolean;
 }
 
-export class PerformanceScrollView extends Component<
-    PerformanceScrollViewProperties,
-    PerformanceScrollViewState
-> {
-    dummyScrollContainer: HTMLDivElement;
-    // container: HTMLDivElement;
+export class PerformanceScrollView extends Component<PerformanceScrollViewProperties, PerformanceScrollViewState> {
+    dummyScrollContainer: DummyScroller;
+    itemBuffer: ItemBuffer;
 
     constructor(props: PerformanceScrollViewProperties) {
         super(props);
+
+        // Bind functions to our class, to ensure it can access the right "this" variable
         this.itemRendered = this.itemRendered.bind(this);
         this.containerScrolled = this.containerScrolled.bind(this);
         this.setContainer = this.setContainer.bind(this);
         this.updateAnimation = this.updateAnimation.bind(this);
+        this.onIdle = this.onIdle.bind(this);
+
+        let bufferOffset = 0;
+        if (props.startIndex) {
+            // If we've specified a startIndex, we need to make sure our current buffer window
+            // encompasses the item we want to start with.
+
+            bufferOffset = props.startIndex - Math.floor(props.itemBufferSize / 2);
+
+            // Then make sure it actually fits within the bounds of our items
+            bufferOffset = Math.max(bufferOffset, 0);
+            bufferOffset = Math.min(bufferOffset, props.numberOfItems - props.itemBufferSize);
+        }
+
         this.state = {
-            itemHeights: [],
+            itemBuffer: [],
+            currentBufferOffset: bufferOffset,
+            itemHeights: new Map(),
             totalHeight: 0,
             currentScrollPosition: 1,
             animationOffset: 0,
-            mergedContainerStyles: Object.assign({}, props.style, scrollViewStyles)
+            mergedContainerStyles: Object.assign({}, props.style, scrollViewStyles),
+            isInitialRenderLoop: true,
+            awaitingItemSizes: true
         } as any;
+
+        this.itemBuffer = new ItemBuffer(this);
+    }
+
+    componentWillReceiveProps(nextProps: PerformanceScrollViewProperties) {
+        console.log("prop!", arguments);
+        // if (nextProps.numberOfItems !== this.props.numberOfItems) {
+        //     this.setState({
+        //         itemBuffer: createItemBuffer(0, nextProps)
+        //     });
+        // }
+        console.log("newprops?", nextProps);
     }
 
     get isAtScrollBottom() {
@@ -71,11 +110,8 @@ export class PerformanceScrollView extends Component<
             return true;
         }
         return (
-            Math.abs(
-                this.state.totalHeight -
-                    this.state.container!.clientHeight -
-                    this.state.currentScrollPosition
-            ) <= 1
+            Math.abs(this.state.totalHeight - this.state.container!.clientHeight - this.state.currentScrollPosition) <=
+            1
         );
     }
 
@@ -90,35 +126,34 @@ export class PerformanceScrollView extends Component<
         let container = this.state.container;
 
         let currentY = 0;
-        if (
-            this.props.addNewItemsTo == AddNewItemsTo.Bottom &&
-            this.state.totalHeight < container.clientHeight
-        ) {
-            let allItemHeight = this.state.itemHeights.reduce((a, b) => a + b, 0);
-            currentY = container.clientHeight - allItemHeight;
+        if (this.props.addNewItemsTo == AddNewItemsTo.Bottom && this.state.totalHeight < container.clientHeight) {
+            currentY = container.clientHeight - this.state.totalHeight;
         }
 
-        return React.Children.map(this.props.children, (child, idx) => {
-            let yPosition: number | undefined = undefined;
-            let height = this.state.itemHeights[idx];
+        // console.log("start at Y", currentY, this.state.currentScrollPosition);
 
+        return this.state.itemBuffer.map((child, idx) => {
+            let indexInFullItemList = this.state.currentBufferOffset + idx;
+
+            let yPosition: number | undefined = undefined;
+            let height = this.state.itemHeights.get(indexInFullItemList);
             if (height) {
                 let y = currentY - this.state.currentScrollPosition;
                 if (this.state.animation && this.isAtScrollBottom) {
                     y += this.state.animation.currentOffset;
                 }
 
-                if (y + height > 0) {
+                if (y + height > 0 && y < this.state.container!.clientHeight) {
                     yPosition = y;
                 }
 
-                currentY += this.state.itemHeights[idx];
+                currentY += height;
             }
-
             return (
                 <ScrollViewItem
-                    key={"item_" + idx}
-                    itemIndex={idx}
+                    debugId={indexInFullItemList.toString()}
+                    key={"item_" + indexInFullItemList}
+                    itemIndex={indexInFullItemList}
                     onRender={this.itemRendered}
                     y={yPosition}
                 >
@@ -126,21 +161,6 @@ export class PerformanceScrollView extends Component<
                 </ScrollViewItem>
             );
         });
-    }
-
-    renderDummyScroller() {
-        return (
-            <div
-                style={{
-                    width: "100%",
-                    minHeight: "100%",
-                    paddingBottom: "2px",
-                    height: this.state.totalHeight,
-                    position: "absolute",
-                    background: "transparent"
-                }}
-            />
-        );
     }
 
     render() {
@@ -152,12 +172,13 @@ export class PerformanceScrollView extends Component<
                 ref={this.setContainer}
             >
                 {this.renderChildItems()}
-                <div
+
+                <DummyScroller
                     ref={el => (this.dummyScrollContainer = el!)}
-                    style={dummyScrollContainerStyles}
-                >
-                    {this.renderDummyScroller()}
-                </div>
+                    height={this.state.totalHeight}
+                    onScroll={this.containerScrolled}
+                    onIdle={this.onIdle}
+                />
             </div>
         );
     }
@@ -166,67 +187,51 @@ export class PerformanceScrollView extends Component<
         if (this.state.container) {
             return;
         }
+
         this.setState({
             container: el
         });
     }
 
     componentDidMount() {
-        this.dummyScrollContainer.addEventListener("scroll", this.containerScrolled);
-        this.dummyScrollContainer.addEventListener("click", e => {
-            this.dummyScrollContainer.style.pointerEvents = "none";
-            let el = document.elementFromPoint(e.clientX, e.clientY);
-            this.dummyScrollContainer.style.pointerEvents = "";
-            if (el) {
-                let new_event = new (e.constructor as any)(e.type, e);
-                el.dispatchEvent(new_event);
-            }
+        // new IdleWatcher(this.dummyScrollContainer);
+    }
+
+    containerScrolled(newScrollPosition: number) {
+        // Save ourselves a setState loop here - if the scroll position hasn't actually
+        // changed, ignore it.
+
+        if (newScrollPosition === this.state.currentScrollPosition) {
+            console.log("samescroll", newScrollPosition);
+            return;
+        }
+
+        this.setState({
+            currentScrollPosition: newScrollPosition
         });
-        this.containerScrolled();
-    }
-
-    containerScrolled() {
-        // If an iOS scroll element is either at the max or min scroll position,
-        // Safari sends the scroll event to the parent, all the up to document.body.
-        // We don't want this - we want to contain the scrolling to this element. So if we
-        // are at either extreme, we bump it by one pixel.
-
-        let toSaveInState = this.dummyScrollContainer.scrollTop;
-
-        if (this.dummyScrollContainer.scrollTop === 1) {
-            toSaveInState = 0;
-            return;
-        }
-
-        if (this.dummyScrollContainer.scrollTop === 0) {
-            this.setScrollContainerPosition(1);
-        } else if (
-            this.dummyScrollContainer.scrollTop ===
-            this.dummyScrollContainer.scrollHeight - this.dummyScrollContainer.clientHeight
-        ) {
-            this.dummyScrollContainer.scrollTop -= 1;
-        }
-        if (toSaveInState !== this.state.currentScrollPosition) {
-            this.setState({
-                currentScrollPosition: toSaveInState
-            });
-        }
-    }
-
-    setScrollContainerPosition(newPosition: number) {
-        if (newPosition === 0 && this.dummyScrollContainer.scrollTop <= 1) {
-            // Because of our 1px scroll buffer, we ignore any instructions to do this
-            return;
-        }
-        console.warn("set scroll from", this.dummyScrollContainer.scrollTop, "to", newPosition);
-        this.dummyScrollContainer.scrollTop = newPosition;
     }
 
     animationTimer: number;
     componentDidUpdate() {
+        // console.log("awaiting?", this.state.awaitingItemSizes);
         // this.containerScrolled();
         if (this.state.animation) {
             this.animationTimer = requestAnimationFrame(this.updateAnimation);
+        }
+
+        // There are a few special things we do in the initial render loop, like ignore
+        // animation effects, and enforce the initial scroll position if startIndex has
+        // been set. The best way I can think to detect if they are done is in this if
+        // statement:
+
+        if (this.state.isInitialRenderLoop && this.state.itemHeights.size === this.props.itemBufferSize) {
+            console.info("VIEW: Initial render loop complete");
+            this.setState({
+                isInitialRenderLoop: false
+            });
+        }
+        if (this.state.currentScrollPosition !== this.dummyScrollContainer.position) {
+            this.dummyScrollContainer.position = this.state.currentScrollPosition;
         }
     }
 
@@ -284,13 +289,25 @@ export class PerformanceScrollView extends Component<
     }
 
     itemRendered(index: number, width: number, height: number) {
+        // ASSUMPTION: this function is called in order when rendering multiple items. Initial
+        // tests show this is true, but it's an assumption regarding future versions.
+
+        console.info("VIEW: Received render info for " + index);
+
         this.setState(
             state => {
-                state.itemHeights[index] = height;
+                let newHeights = new Map<number, number>();
+                state.itemHeights.forEach((val, key) => {
+                    newHeights.set(key, val);
+                });
 
+                newHeights.set(index, height); //[index] = height;
                 let animation: ScrollViewAnimation | undefined = undefined;
 
-                if (this.props.animationDuration) {
+                // We don't animate arriving elements if we're in an initial rendering loop
+
+                if ((1 as any) === 2 && this.props.animationDuration && this.state.isInitialRenderLoop === false) {
+                    console.log("doing animation");
                     let animationTotal = height;
                     if (state.animation) {
                         // If we have a currently running animation, we want to factor in the amount
@@ -310,22 +327,67 @@ export class PerformanceScrollView extends Component<
                 let newTotal = state.totalHeight + height;
                 let scrollPosition = state.currentScrollPosition;
 
-                if (this.props.addNewItemsTo == AddNewItemsTo.Bottom && this.isAtScrollBottom) {
-                    scrollPosition = newTotal - state.container!.clientHeight + 1;
+                if (index == this.props.startIndex && this.state.isInitialRenderLoop) {
+                    let initialScrollPosition = 0;
+                    for (let i = this.state.currentBufferOffset; i < index; i++) {
+                        let height = newHeights.get(i);
+                        if (!height) {
+                            throw new Error("Tried to access position before previous elements are rendered");
+                        }
+                        initialScrollPosition += height;
+                    }
+
+                    scrollPosition = initialScrollPosition;
+                    if (this.props.addNewItemsTo == AddNewItemsTo.Bottom) {
+                        scrollPosition -= this.state.container!.clientHeight;
+                        scrollPosition += newHeights.get(this.props.startIndex)!;
+                    }
+                } /*else if (
+                    this.state.isInitialRenderLoop === false &&
+                    this.props.addNewItemsTo == AddNewItemsTo.Bottom &&
+                    this.isAtScrollBottom
+                ) {
+                    console.log("bottom insert?");
+                    scrollPosition = Math.max(0, newTotal - state.container!.clientHeight + 1);
+                }*/
+
+                let idx = 0;
+                let rollingHeight = 0;
+                let bufferStart = this.state.currentBufferOffset;
+                let bufferEnd = bufferStart + this.props.itemBufferSize;
+                for (idx = bufferStart; idx < bufferEnd; idx++) {
+                    let height = this.state.itemHeights.get(idx);
+
+                    if (height) {
+                        rollingHeight += height;
+                    }
+
+                    if (rollingHeight > this.state.currentScrollPosition) {
+                        break;
+                    }
+                }
+                console.log("top index calculated to be", idx);
+                if (this.state.isInitialRenderLoop === false && index < idx) {
+                    // return {};
+                    scrollPosition += height;
+                    console.info("post initial", index, scrollPosition);
                 }
 
                 return {
-                    itemHeights: state.itemHeights,
+                    itemHeights: newHeights,
                     totalHeight: newTotal,
                     animation,
+                    awaitingItemSizes: false,
                     currentScrollPosition: scrollPosition
                 };
             },
             () => {
-                if (this.state.currentScrollPosition !== this.dummyScrollContainer.scrollTop) {
-                    this.setScrollContainerPosition(this.state.currentScrollPosition);
-                }
+                console.log("state is set?");
             }
         );
+    }
+
+    onIdle() {
+        this.itemBuffer.checkOffset();
     }
 }

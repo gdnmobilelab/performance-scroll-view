@@ -18,40 +18,26 @@ const selectStyles = {
     width: "100%"
 };
 
-function basicDemo() {
-    return (
-        <PerformanceScrollView style={{ flexGrow: 1 }}>
-            <div style={{ height: "60vh", background: "yellow", margin: "10px" }}>
-                <button onClick={() => alert("hello")}>hello</button>
-            </div>
-            <div style={{ height: "60vh", background: "green", margin: "10px" }}>hello2</div>
-            <div style={{ height: "60vh", background: "pink", margin: "10px" }}>hello2</div>
-        </PerformanceScrollView>
-    );
-}
-
-let bottomAlignElements: JSX.Element[] = [];
-
-function addBottomAlignElement() {
-    bottomAlignElements.push(
-        <div
-            style={{ background: "white", margin: 10 }}
-            key={"item_" + bottomAlignElements.length}
-            onClick={addBottomAlignElement}
-        >
-            test {bottomAlignElements.length}
-        </div>
-    );
-
-    if (demoInstance) {
-        demoInstance.setState({
-            blah: Date.now()
+function basicDemo(numberOfItems: number) {
+    function itemGenerator(indexes: number[]) {
+        return indexes.map(index => {
+            return (
+                <div style={{ height: "60vh", background: "yellow", margin: "10px" }}>
+                    <button onClick={() => alert("hello")}>hello, item {index}</button>
+                </div>
+            );
         });
     }
-}
 
-addBottomAlignElement();
-addBottomAlignElement();
+    return (
+        <PerformanceScrollView
+            style={{ flexGrow: 1 }}
+            itemGenerator={itemGenerator}
+            numberOfItems={numberOfItems}
+            itemBufferSize={10}
+        />
+    );
+}
 
 function easeOutBack(t: number, b: number, c: number, d: number, s: number = 0) {
     if (s === 0) {
@@ -60,21 +46,40 @@ function easeOutBack(t: number, b: number, c: number, d: number, s: number = 0) 
     return c * ((t = t / d - 1) * t * ((s + 1) * t + s) + 1) + b;
 }
 
-function bottomAlignDemo() {
+function bottomAlignDemo(numberOfItems: number) {
+    function itemGenerator(indexes: number[]) {
+        return indexes.map(index => {
+            return (
+                <div
+                    style={{ background: "white", margin: 10 }}
+                    key={"item_" + index}
+                    onClick={() => {
+                        demoInstance.setState({ numberOfItems: demoInstance.state.numberOfItems + 1 });
+                    }}
+                >
+                    test {index}
+                </div>
+            );
+        });
+    }
+
     return (
         <PerformanceScrollView
             style={{ flexGrow: 1 }}
             addNewItemsTo={AddNewItemsTo.Bottom}
             animationDuration={750}
             animationEaseFunction={easeOutBack}
-        >
-            {bottomAlignElements}
-        </PerformanceScrollView>
+            numberOfItems={numberOfItems}
+            itemBufferSize={40}
+            startIndex={30}
+            itemGenerator={itemGenerator}
+        />
     );
 }
 
 interface DemoState {
     mode: string;
+    numberOfItems: number;
 }
 
 let demoInstance: any;
@@ -84,6 +89,7 @@ export class Demo extends React.Component<any, DemoState> {
         super();
         demoInstance = this;
         this.state = {
+            numberOfItems: 10,
             mode: window.location.hash.substr(1) || "basic"
         };
     }
@@ -92,16 +98,14 @@ export class Demo extends React.Component<any, DemoState> {
         return (
             <div style={containerStyles}>
                 <div>
-                    <select
-                        style={selectStyles}
-                        onChange={this.changed.bind(this)}
-                        defaultValue={this.state.mode}
-                    >
+                    <select style={selectStyles} onChange={this.changed.bind(this)} defaultValue={this.state.mode}>
                         <option value="basic">Basic demo</option>
                         <option value="bottom-align">Bottom align demo</option>
                     </select>
                 </div>
-                {this.state.mode == "basic" ? basicDemo() : bottomAlignDemo()}
+                {this.state.mode == "basic"
+                    ? basicDemo(this.state.numberOfItems)
+                    : bottomAlignDemo(this.state.numberOfItems)}
             </div>
         );
     }

@@ -13,6 +13,7 @@ interface ScrollViewItemProperties {
     onRender: (index: number, width: number, height: number) => void;
     itemIndex: number;
     y?: number;
+    debugId?: string;
 }
 
 export class ScrollViewItem extends Component<ScrollViewItemProperties, any> {
@@ -28,7 +29,7 @@ export class ScrollViewItem extends Component<ScrollViewItemProperties, any> {
         }
 
         return (
-            <div ref={el => (this.wrapperElement = el!)} style={style}>
+            <div id={this.props.debugId} ref={el => (this.wrapperElement = el!)} style={style}>
                 {this.props.children}
             </div>
         );
