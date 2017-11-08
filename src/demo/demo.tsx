@@ -54,6 +54,7 @@ function bottomAlignDemo(numberOfItems: number) {
                     style={{ background: "white", margin: 10 }}
                     key={"item_" + index}
                     onClick={() => {
+                        console.log("CLICK!");
                         demoInstance.setState({ numberOfItems: demoInstance.state.numberOfItems + 1 });
                     }}
                 >
@@ -63,16 +64,19 @@ function bottomAlignDemo(numberOfItems: number) {
         });
     }
 
+    let moreIndicator = <div>LOADING MOOOOREEEEE</div>;
+
     return (
         <PerformanceScrollView
             style={{ flexGrow: 1 }}
-            addNewItemsTo={AddNewItemsTo.Bottom}
+            addNewItemsTo={AddNewItemsTo.Top}
             animationDuration={750}
             animationEaseFunction={easeOutBack}
             numberOfItems={numberOfItems}
             itemBufferSize={40}
-            startIndex={30}
+            startIndex={50}
             itemGenerator={itemGenerator}
+            loadingMoreIndicator={moreIndicator}
         />
     );
 }
@@ -89,7 +93,7 @@ export class Demo extends React.Component<any, DemoState> {
         super();
         demoInstance = this;
         this.state = {
-            numberOfItems: 10,
+            numberOfItems: 100,
             mode: window.location.hash.substr(1) || "basic"
         };
     }

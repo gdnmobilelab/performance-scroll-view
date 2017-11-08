@@ -152,6 +152,10 @@ export class DummyScroller extends React.Component<DummyScrollerProps> {
         if (!this.element) {
             throw new Error("Cannot get scroll position without element reference");
         }
+        if (this.element.scrollTop === 1) {
+            // hide our buffer
+            return 0;
+        }
         return this.element.scrollTop;
     }
 
