@@ -188,11 +188,14 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
             }
 
             let keyPrefix = "item";
-            if (
-                this.props.loadingMoreIndicator &&
-                indexInFullItemList === this.state.currentBufferOffset &&
-                indexInFullItemList > 0
-            ) {
+            let isTopItemButNotAtStart =
+                indexInFullItemList === this.state.currentBufferOffset && indexInFullItemList > 0;
+
+            let isBottomItemButNotAtEnd =
+                indexInFullItemList === this.state.currentBufferOffset + this.state.itemBuffer.length - 1 &&
+                this.state.currentBufferOffset + this.state.itemBuffer.length < this.props.numberOfItems;
+
+            if (this.props.loadingMoreIndicator && (isTopItemButNotAtStart || isBottomItemButNotAtEnd)) {
                 // This isn't actually an item with this index, it's a loading indicator
                 // that serves as a placeholder. We make sure to differentiate the key for this,
                 // otherwise ScrollViewItem doesn't call componentDidMount() and return the
@@ -418,7 +421,7 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
                 }
             }
 
-            if (pendingHeight && !existingValue) {
+            if (pendingHeight) {
                 // If this is the index for a new item, there isn't any existing
                 // data to check. So we set a new object with the height returned.
 
@@ -432,6 +435,15 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
                     // to result in the visible items being shunted downwards. We need to accommodate
                     // that by shifting our scroll position accordingly, so the user sees no visible
                     // change.
+
+                    if (existingValue) {
+                        // Slightly confusing here, but if there is an existing value AND a pending
+                        // value that means we've rendered a new item into the existing index. Usually
+                        // that means we've replaced a "load more" indicator with an actual item. We need
+                        // to adjust the scroll position back by the previous amount before we add the
+                        // new amount.
+                        newScrollPosition -= existingValue.height;
+                    }
 
                     newScrollPosition += pendingHeight;
                 }
@@ -532,6 +544,7 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
     }
 
     async onIdle() {
+        // debugger;
         let { top, bottom } = this.getCurrentVisibleItemBounds();
         let mid = Math.round(top + (bottom - top) / 2);
 
@@ -542,33 +555,47 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
         if (newTop < 0) {
             newTop = 0;
         }
-
+        console.log("START", this.state.currentBufferOffset, this.state.itemBuffer.length);
         if (newTop === this.state.currentBufferOffset) {
             console.info("VIEW: No index change after scroll event finished");
             return;
         }
 
-        console.log({ top: this.state.currentBufferOffset, newTop });
-        if (this.state.currentBufferOffset > 0) {
-            console.log("removing height for loading indicator", this.state.currentBufferOffset);
-            this.state.itemPositions.delete(this.state.currentBufferOffset);
-            // newTop++;
-        }
+        console.info("VIEW: Index change after scroll, from", this.state.currentBufferOffset, "to", newTop);
+
+        console.log({ newTop, top: this.state.currentBufferOffset, bottom: newTop + bufferSize });
+
+        // This doesn't feel quite right, but we remove items that now fall outside of our
+        // buffer bounds. When we do, we need to adjust the current scroll position so that
+        // the transition is seamless to users.
+
+        let adjustedScrollPosition = this.state.currentScrollPosition;
 
         let newItems = await this.itemBuffer.load(this.props, {
             currentBufferOffset: newTop
         });
 
-        // this.state.itemPositions.forEach((val, key) => {
-        //     if (key < newTop || key >= newTop + newItems.length) {
-        //         this.state.itemPositions.delete(key);
-        //     }
-        // });
+        let newMap = new Map<number, HeightAndPosition>();
 
+        this.state.itemPositions.forEach((val, key) => {
+            if (key <= newTop) {
+                return;
+            }
+            if (key >= newTop + newItems.length) {
+                adjustedScrollPosition -= val.height;
+                return;
+            }
+
+            newMap.set(key, val);
+        });
+
+        console.log("new items", newItems, newMap);
+        // debugger;
         this.setState({
             currentBufferOffset: newTop,
             itemBuffer: newItems,
-            itemPositions: this.state.itemPositions
+            itemPositions: newMap,
+            currentScrollPosition: adjustedScrollPosition
         });
     }
 }

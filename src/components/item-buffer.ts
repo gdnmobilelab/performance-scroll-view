@@ -42,19 +42,31 @@ export class ItemBuffer {
         startIndex = Math.max(startIndex, 0);
         endIndex = Math.min(endIndex, props.numberOfItems);
 
-        if (startIndex > 0) {
+        let startLoadingIndicator: JSX.Element | undefined = undefined;
+        let endLoadingIndicator: JSX.Element | undefined = undefined;
+
+        if (startIndex > 0 && props.loadingMoreIndicator) {
             // If the start index is above zero then rather than display the first item,
             // we insert our loading more indicator below.
             startIndex++;
+            startLoadingIndicator = props.loadingMoreIndicator;
+        }
+        if (endIndex < props.numberOfItems && props.loadingMoreIndicator) {
+            endIndex--;
+            endLoadingIndicator = props.loadingMoreIndicator;
         }
 
         let items = await this.fetchItems(startIndex, endIndex, props);
 
-        if (startIndex > 0 && props.loadingMoreIndicator) {
+        if (startLoadingIndicator) {
             console.log("ADDING INDICATOR AT START");
-            items.unshift(props.loadingMoreIndicator);
+            items.unshift(startLoadingIndicator);
         }
-
+        if (endLoadingIndicator) {
+            console.log("ADDING INDICATOR AT END");
+            items.push(endLoadingIndicator);
+        }
+        console.log("returning", items.length, "items");
         return items;
     }
 

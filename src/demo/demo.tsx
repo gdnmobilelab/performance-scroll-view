@@ -49,9 +49,14 @@ function easeOutBack(t: number, b: number, c: number, d: number, s: number = 0) 
 function bottomAlignDemo(numberOfItems: number) {
     function itemGenerator(indexes: number[]) {
         return indexes.map(index => {
+            let height = 20;
+            if (index % 2 === 0) {
+                height *= 2;
+            }
+
             return (
                 <div
-                    style={{ background: "white", margin: 10 }}
+                    style={{ background: "white", margin: 10, height: height }}
                     key={"item_" + index}
                     onClick={() => {
                         console.log("CLICK!");
