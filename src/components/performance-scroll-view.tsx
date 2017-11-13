@@ -32,6 +32,7 @@ export interface PerformanceScrollViewProperties extends ItemBufferProperties {
     animationDuration?: number;
     animationEaseFunction?: AnimationEasingFunction;
     startIndex?: number;
+    moreIndicatorGenerator?: (numberOfItems: number) => JSX.Element;
 }
 
 interface ScrollViewAnimation {
@@ -57,6 +58,7 @@ export interface PerformanceScrollViewState {
     isInitialRenderLoop: boolean;
     pendingItemRenders: Map<number, number>;
     newlyAddedIndexes: number[];
+    numberOfNewItems: number;
 }
 
 export class PerformanceScrollView extends Component<PerformanceScrollViewProperties, PerformanceScrollViewState> {
@@ -72,6 +74,7 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
         this.setContainer = this.setContainer.bind(this);
         this.updateAnimation = this.updateAnimation.bind(this);
         this.onIdle = this.onIdle.bind(this);
+        this.scrollToEnd = this.scrollToEnd.bind(this);
 
         let bufferOffset = 0;
         if (props.startIndex) {
@@ -94,7 +97,8 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
             mergedContainerStyles: Object.assign({}, props.style, scrollViewStyles),
             isInitialRenderLoop: true,
             pendingItemRenders: new Map(),
-            newlyAddedIndexes: []
+            newlyAddedIndexes: [],
+            numberOfNewItems: 0
         };
 
         this.itemBuffer = new ItemBuffer(this);
@@ -119,10 +123,24 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
             for (let i = this.props.numberOfItems; i < nextProps.numberOfItems; i++) {
                 newlyAddedIndexes.push(i);
             }
+
+            let numberOfNewItems = 0;
+
+            if (this.isAtScrollEnd() === false) {
+                // We use this variable to keep track of the number of items that have arrived
+                // while the user is scrolling. If they are at the scroll end the items appear
+                // automatically, so we don't add to it.
+
+                numberOfNewItems = nextProps.numberOfItems - this.props.numberOfItems;
+                console.log("SETTING NUM ITEMS", numberOfNewItems, nextProps.numberOfItems, this.props.numberOfItems);
+            }
+
             let newItems = await this.itemBuffer.load(nextProps, this.state);
+
             this.setState({
                 itemBuffer: newItems,
-                newlyAddedIndexes: newlyAddedIndexes
+                newlyAddedIndexes: newlyAddedIndexes,
+                numberOfNewItems: this.state.numberOfNewItems + numberOfNewItems
             });
         }
         console.log("newprops?", nextProps);
@@ -217,6 +235,30 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
         });
     }
 
+    renderMoreIndicator() {
+        if (this.props.moreIndicatorGenerator === undefined || this.state.numberOfNewItems === 0) {
+            return null;
+        }
+
+        let moreIndicator = this.props.moreIndicatorGenerator(this.state.numberOfNewItems);
+
+        let containerStyles: React.CSSProperties = {
+            position: "absolute"
+        };
+
+        if (this.props.addNewItemsTo === AddNewItemsTo.Bottom) {
+            containerStyles.bottom = "0px";
+        } else {
+            containerStyles.top = "0px";
+        }
+
+        return (
+            <div style={containerStyles} onClick={this.scrollToEnd}>
+                {moreIndicator}
+            </div>
+        );
+    }
+
     render() {
         return (
             <div
@@ -233,6 +275,7 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
                     onScroll={this.containerScrolled}
                     onIdle={this.onIdle}
                 />
+                {this.renderMoreIndicator()}
             </div>
         );
     }
@@ -294,9 +337,16 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
             // If we're at or past the end point in the animation, just clear state
             // and return.
 
-            this.setState({
-                animation: undefined
-            });
+            this.setState(
+                {
+                    animation: undefined
+                },
+                () => {
+                    // Our idle listener is disabled if any animation is currently running.
+                    // So, when it's complete, we trigger it just in case.
+                    this.onIdle();
+                }
+            );
 
             return;
         }
@@ -324,7 +374,7 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
             return;
         }
 
-        // setState() doesn't do a recursive merge, so we'll just set the currentOffset on
+        // setState() doesn't do a deep merge, so we'll just set the currentOffset on
         // our existing object. Ideally we'd use Object.assign() to create a new one, but I'm
         // concerned about the performance implications (and this works anyway)
 
@@ -341,6 +391,28 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
         }
 
         return this.state.currentScrollPosition >= this.state.totalHeight - this.dummyScrollContainer.clientHeight;
+    }
+
+    async scrollToEnd() {
+        let newItems = await this.itemBuffer.load(this.props, {
+            currentBufferOffset: this.props.numberOfItems - this.props.itemBufferSize
+        });
+
+        if (this.props.addNewItemsTo === AddNewItemsTo.Top) {
+            this.setState({
+                currentBufferOffset: this.props.numberOfItems - this.props.itemBufferSize,
+                currentScrollPosition: 0,
+                itemPositions: new Map<number, HeightAndPosition>(),
+                itemBuffer: newItems
+            });
+        } else {
+            this.setState({
+                currentBufferOffset: this.props.numberOfItems - this.props.itemBufferSize,
+                currentScrollPosition: this.state.totalHeight - this.dummyScrollContainer.clientHeight,
+                itemPositions: new Map<number, HeightAndPosition>(),
+                itemBuffer: newItems
+            });
+        }
     }
 
     itemRendered(newItemIndex: number, width: number, height: number) {
@@ -543,8 +615,21 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
         };
     }
 
+    shouldResetPendingItemCount() {
+        if (this.state.currentBufferOffset < this.props.numberOfItems - this.props.itemBufferSize) {
+            return false;
+        }
+        return this.state.numberOfNewItems > 0 && this.isAtScrollEnd();
+    }
+
     async onIdle() {
         // debugger;
+        if (this.state.animation) {
+            // If there is an animation currently running we don't want to mess with
+            // our item collection. When the animation is complete it'll call onIdle
+            // by itself.
+            return;
+        }
         let { top, bottom } = this.getCurrentVisibleItemBounds();
         let mid = Math.round(top + (bottom - top) / 2);
 
@@ -558,18 +643,15 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
         console.log("START", this.state.currentBufferOffset, this.state.itemBuffer.length);
         if (newTop === this.state.currentBufferOffset) {
             console.info("VIEW: No index change after scroll event finished");
+            if (this.shouldResetPendingItemCount()) {
+                this.setState({
+                    numberOfNewItems: 0
+                });
+            }
             return;
         }
 
         console.info("VIEW: Index change after scroll, from", this.state.currentBufferOffset, "to", newTop);
-
-        console.log({ newTop, top: this.state.currentBufferOffset, bottom: newTop + bufferSize });
-
-        // This doesn't feel quite right, but we remove items that now fall outside of our
-        // buffer bounds. When we do, we need to adjust the current scroll position so that
-        // the transition is seamless to users.
-
-        let adjustedScrollPosition = this.state.currentScrollPosition;
 
         let newItems = await this.itemBuffer.load(this.props, {
             currentBufferOffset: newTop
@@ -577,25 +659,35 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
 
         let newMap = new Map<number, HeightAndPosition>();
 
+        // This doesn't feel quite right, but we remove items that now fall outside of our
+        // buffer bounds. When we do, we need to adjust the current scroll position so that
+        // the transition is seamless to users.
+
+        let adjustedScrollPosition = this.state.currentScrollPosition;
+
         this.state.itemPositions.forEach((val, key) => {
             if (key <= newTop) {
+                if (this.props.addNewItemsTo === AddNewItemsTo.Bottom) {
+                    adjustedScrollPosition -= val.height;
+                }
                 return;
             }
             if (key >= newTop + newItems.length) {
-                adjustedScrollPosition -= val.height;
+                if (this.props.addNewItemsTo === AddNewItemsTo.Top) {
+                    adjustedScrollPosition -= val.height;
+                }
                 return;
             }
 
             newMap.set(key, val);
         });
 
-        console.log("new items", newItems, newMap);
-        // debugger;
         this.setState({
             currentBufferOffset: newTop,
             itemBuffer: newItems,
             itemPositions: newMap,
-            currentScrollPosition: adjustedScrollPosition
+            currentScrollPosition: adjustedScrollPosition,
+            numberOfNewItems: this.shouldResetPendingItemCount() ? 0 : this.state.numberOfNewItems
         });
     }
 }

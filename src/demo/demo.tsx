@@ -71,17 +71,22 @@ function bottomAlignDemo(numberOfItems: number) {
 
     let moreIndicator = <div>LOADING MOOOOREEEEE</div>;
 
+    let generator = (numberOfItems: number) => {
+        return <div>more stuff arrived.</div>;
+    };
+
     return (
         <PerformanceScrollView
             style={{ flexGrow: 1 }}
-            addNewItemsTo={AddNewItemsTo.Top}
+            addNewItemsTo={AddNewItemsTo.Bottom}
             animationDuration={750}
             animationEaseFunction={easeOutBack}
             numberOfItems={numberOfItems}
             itemBufferSize={40}
-            startIndex={50}
+            startIndex={99}
             itemGenerator={itemGenerator}
             loadingMoreIndicator={moreIndicator}
+            moreIndicatorGenerator={generator}
         />
     );
 }
