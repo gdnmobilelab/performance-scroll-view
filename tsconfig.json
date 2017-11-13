@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "outDir": "build/dist",
+        "outDir": "lib",
         "module": "esnext",
         "target": "es6",
         "lib": ["es6", "dom"],
@@ -15,7 +15,8 @@
         "noImplicitAny": true,
         "strictNullChecks": true,
         "suppressImplicitAnyIndexErrors": true,
-        "noUnusedLocals": true
+        "noUnusedLocals": true,
+        "declaration": true
     },
     "exclude": ["node_modules", "build", "scripts", "acceptance-tests", "webpack", "jest", "src/setupTests.ts"]
 }

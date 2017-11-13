@@ -109,7 +109,6 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
     }
 
     async componentWillReceiveProps(nextProps: PerformanceScrollViewProperties) {
-        console.log("prop!", arguments);
         if (nextProps.numberOfItems !== this.props.numberOfItems) {
             console.info("VIEW: Number of items changed from", this.props.numberOfItems, "to", nextProps.numberOfItems);
 
@@ -132,7 +131,6 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
                 // automatically, so we don't add to it.
 
                 numberOfNewItems = nextProps.numberOfItems - this.props.numberOfItems;
-                console.log("SETTING NUM ITEMS", numberOfNewItems, nextProps.numberOfItems, this.props.numberOfItems);
             }
 
             let newItems = await this.itemBuffer.load(nextProps, this.state);
@@ -143,7 +141,6 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
                 numberOfNewItems: this.state.numberOfNewItems + numberOfNewItems
             });
         }
-        console.log("newprops?", nextProps);
     }
 
     get isAtScrollBottom() {
@@ -640,7 +637,7 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
         if (newTop < 0) {
             newTop = 0;
         }
-        console.log("START", this.state.currentBufferOffset, this.state.itemBuffer.length);
+
         if (newTop === this.state.currentBufferOffset) {
             console.info("VIEW: No index change after scroll event finished");
             if (this.shouldResetPendingItemCount()) {

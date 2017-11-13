@@ -59,14 +59,13 @@ export class ItemBuffer {
         let items = await this.fetchItems(startIndex, endIndex, props);
 
         if (startLoadingIndicator) {
-            console.log("ADDING INDICATOR AT START");
+            console.info("BUFFER: Adding 'loading more' indicator to the top");
             items.unshift(startLoadingIndicator);
         }
         if (endLoadingIndicator) {
-            console.log("ADDING INDICATOR AT END");
+            console.info("BUFFER: Adding 'loading more' indicator to the bottom");
             items.push(endLoadingIndicator);
         }
-        console.log("returning", items.length, "items");
         return items;
     }
 
@@ -116,120 +115,4 @@ export class ItemBuffer {
         let keys = Array.from(map.keys()).sort((a, b) => a - b);
         return keys.map(key => map.get(key)!);
     }
-
-    // async checkOffset() {
-    //     // Difficulty here is that we don't know the height of un-rendered items, so instead
-    //     // we just go by the number of items. That might result in more redraws than we would
-    //     // otherwise want, but so be it.
-
-    //     let currentY = 0;
-    //     let scrollTop = this.target.state.currentScrollPosition;
-
-    //     let scrollBottom = scrollTop + this.target.dummyScrollContainer.clientHeight;
-
-    //     // First we find how what items are currently visible on screen
-
-    //     let visibleStartIndex = -1;
-    //     let visibleStartOffset = -1;
-    //     let visibleEndIndex = -1;
-
-    //     let oldTop = this.target.state.currentBufferOffset;
-    //     let oldBottom = oldTop + this.target.props.itemBufferSize;
-    //     console.log({ oldTop, oldBottom });
-    //     for (let key = oldTop; key < oldBottom; key++) {
-    //         let val = this.target.state.itemHeights.get(key);
-    //         if (!val) {
-    //             console.info(`Expected to get height at ${key} but it wasn't there.`);
-    //             throw new Error("Expected item height at" + key);
-    //         }
-    //         currentY += val;
-    //         if (currentY > scrollTop && visibleStartIndex === -1) {
-    //             visibleStartIndex = key;
-    //             visibleStartOffset = currentY - scrollTop - val;
-    //         }
-
-    //         if (currentY >= scrollBottom && visibleEndIndex === -1) {
-    //             visibleEndIndex = key;
-    //         }
-    //     }
-
-    //     // this.target.state.itemHeights.forEach((val, key) => {
-    //     //     currentY += val;
-    //     //     if (currentY > scrollTop && visibleStartIndex === -1) {
-    //     //         visibleStartIndex = key;
-    //     //     }
-    //     //     if (currentY > scrollBottom && visibleEndIndex === -1) {
-    //     //         visibleEndIndex = key;
-    //     //     }
-    //     // });
-
-    //     // Then work out the midpoint - we consider the current middle of the screen
-
-    //     let midPoint = Math.round(visibleStartIndex + (visibleEndIndex - visibleStartIndex) / 2);
-
-    //     console.log({ visibleStartIndex, visibleEndIndex, midPoint, visibleStartOffset });
-
-    //     let topHalf = Math.round(this.target.props.itemBufferSize / 2);
-    //     let bottomHalf = this.target.props.itemBufferSize - topHalf;
-
-    //     let newTop = midPoint - topHalf;
-    //     let newBottom = midPoint + bottomHalf;
-
-    //     console.log({
-    //         newTop,
-    //         newBottom,
-    //         oldTop,
-    //         oldBottom
-    //     });
-
-    //     if (newTop === oldTop && newBottom === oldBottom) {
-    //         console.info("ITEM BUFFER: no new items after scroll");
-    //         return;
-    //     }
-
-    //     let newItems = await this.fetchItems(newTop, newBottom);
-
-    //     let heightRemoved = 0;
-    //     let newScrollPosition = this.target.state.currentScrollPosition;
-
-    //     for (let idx = this.target.state.currentBufferOffset; idx < newTop; idx++) {
-    //         console.log("REMOVE FROM TOP!", idx);
-    //         let height = this.target.state.itemHeights.get(idx);
-    //         if (!height) {
-    //             throw new Error("Expected height for idx" + idx);
-    //         }
-    //         this.target.state.itemHeights.delete(idx);
-    //         heightRemoved += height;
-    //         newScrollPosition -= height;
-    //     }
-    //     for (let idx = newBottom; idx < oldBottom; idx++) {
-    //         console.log("REMOVE FROM BOTTOM", idx);
-    //         let height = this.target.state.itemHeights.get(idx);
-    //         if (!height) {
-    //             throw new Error("Expected height for idx" + idx);
-    //         }
-    //         heightRemoved += height;
-    //         // newScrollPosition += height;
-    //         this.target.state.itemHeights.delete(idx);
-    //     }
-
-    //     let scroll = -visibleStartOffset;
-    //     for (let idx = newTop; idx < visibleStartIndex; idx++) {
-    //         let height = this.target.state.itemHeights.get(idx);
-    //         if (height) {
-    //             scroll += height;
-    //         }
-    //     }
-
-    //     console.log("removed", heightRemoved, "scroll", scroll, newScrollPosition);
-
-    //     // debugger;
-    //     this.target.setState({
-    //         currentScrollPosition: scroll,
-    //         itemHeights: this.target.state.itemHeights,
-    //         currentBufferOffset: newTop,
-    //         itemBuffer: newItems,
-    //         totalHeight: this.target.state.totalHeight - heightRemoved
-    //     });
-    // }
 }
