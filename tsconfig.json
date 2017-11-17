@@ -5,7 +5,7 @@
         "target": "es6",
         "lib": ["es6", "dom"],
         "sourceMap": true,
-        "allowJs": true,
+        "allowJs": false,
         "jsx": "react",
         "moduleResolution": "node",
         "rootDir": "src",
@@ -18,5 +18,5 @@
         "noUnusedLocals": true,
         "declaration": true
     },
-    "exclude": ["node_modules", "build", "scripts", "acceptance-tests", "webpack", "jest", "src/setupTests.ts"]
+    "exclude": ["node_modules", "lib", "scripts", "acceptance-tests", "webpack", "jest", "src/setupTests.ts"]
 }

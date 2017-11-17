@@ -37,9 +37,11 @@ export class ItemBuffer {
         // smaller buffer.
         let bufferSize = Math.min(props.itemBufferSize, props.numberOfItems);
         let startIndex = state.currentBufferOffset;
-        let endIndex = startIndex + bufferSize;
 
         startIndex = Math.max(startIndex, 0);
+
+        let endIndex = startIndex + bufferSize;
+
         endIndex = Math.min(endIndex, props.numberOfItems);
 
         let startLoadingIndicator: JSX.Element | undefined = undefined;
@@ -73,7 +75,9 @@ export class ItemBuffer {
         let indexesToFetch: number[] = [];
         let results = new Map<number, JSX.Element>();
 
-        console.info(`ITEM BUFFER: Fetching items from ${startIndex} to ${endIndex}`);
+        console.info(
+            `ITEM BUFFER: Fetching items from ${startIndex} to ${endIndex}, out of ${props.numberOfItems} total items`
+        );
 
         for (let index = startIndex; index < endIndex; index++) {
             let result = this.elementCache.get(index);

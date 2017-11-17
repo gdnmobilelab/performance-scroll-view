@@ -91,7 +91,7 @@ function bottomAlignDemo(numberOfItems: number) {
     );
 }
 
-interface DemoState {
+export interface DemoState {
     mode: string;
     numberOfItems: number;
 }
@@ -99,11 +99,11 @@ interface DemoState {
 let demoInstance: any;
 
 export class Demo extends React.Component<any, DemoState> {
-    constructor() {
-        super();
+    constructor(props: any) {
+        super(props);
         demoInstance = this;
         this.state = {
-            numberOfItems: 100,
+            numberOfItems: 150,
             mode: window.location.hash.substr(1) || "basic"
         };
     }

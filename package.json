@@ -2,8 +2,9 @@
     "name": "performance-scroll-view",
     "version": "0.1.0",
     "private": true,
-    "dependencies": {
-        "eases": "^1.0.8",
+    "main": "lib/components/performance-scroll-view.js",
+    "typings": "lib/components/performance-scroll-view.d.ts",
+    "peerDependencies": {
         "react": "^16.0.0",
         "react-dom": "^16.0.0"
     },
@@ -16,12 +17,16 @@
     "devDependencies": {
         "@types/jest": "^21.1.5",
         "@types/node": "^8.0.47",
-        "@types/react": "^16.0.18",
-        "@types/react-dom": "^16.0.2",
+        "@types/react": "^16.0.22",
+        "@types/react-dom": "^16.0.3",
         "react-scripts-ts": "^2.8.0"
     },
     "prettier": {
         "printWidth": 120,
         "tabWidth": 4
+    },
+    "dependencies": {
+        "react": "^16.1.1",
+        "react-dom": "^16.1.1"
     }
 }
