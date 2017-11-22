@@ -120,8 +120,21 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
 
             let newlyAddedIndexes: number[] = [];
 
+            // If there are fewer items than last time, we need to make sure we remove
+            // the height for these missing items from our overall height.
+
+            let removedHeight = 0;
+
             for (let i = this.props.numberOfItems; i < nextProps.numberOfItems; i++) {
                 newlyAddedIndexes.push(i);
+            }
+
+            for (let i = nextProps.numberOfItems; i < this.props.numberOfItems; i++) {
+                let existingRender = this.state.itemPositions.get(i);
+                if (existingRender) {
+                    removedHeight += existingRender.height;
+                    this.state.itemPositions.delete(i);
+                }
             }
 
             let numberOfNewItems = 0;
@@ -139,7 +152,9 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
             this.setState({
                 itemBuffer: newItems,
                 newlyAddedIndexes: newlyAddedIndexes,
-                numberOfNewItems: this.state.numberOfNewItems + numberOfNewItems
+                numberOfNewItems: this.state.numberOfNewItems + numberOfNewItems,
+                totalHeight: this.state.totalHeight - removedHeight,
+                itemPositions: this.state.itemPositions
             });
         }
     }

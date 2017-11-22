@@ -81,7 +81,7 @@ export class ItemBuffer {
 
         for (let index = startIndex; index < endIndex; index++) {
             let result = this.elementCache.get(index);
-
+            console.log("get item?", index);
             if (!result) {
                 indexesToFetch.push(index);
             } else {
