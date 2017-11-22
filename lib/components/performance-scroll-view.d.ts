@@ -46,7 +46,6 @@ export declare class PerformanceScrollView extends Component<PerformanceScrollVi
     itemBuffer: ItemBuffer;
     constructor(props: PerformanceScrollViewProperties);
     componentWillReceiveProps(nextProps: PerformanceScrollViewProperties): Promise<void>;
-    readonly isAtScrollBottom: boolean;
     renderChildItems(): JSX.Element[] | null;
     renderMoreIndicator(): JSX.Element | null;
     render(): JSX.Element;

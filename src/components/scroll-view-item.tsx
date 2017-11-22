@@ -37,7 +37,7 @@ export class ScrollViewItem extends Component<ScrollViewItemProperties, any> {
 
     componentDidMount() {
         let size = this.wrapperElement.getBoundingClientRect();
-        this.props.onRender(this.props.itemIndex, size.width, size.height);
+        this.props.onRender(this.props.itemIndex, Math.ceil(size.width), Math.ceil(size.height));
     }
 
     shouldComponentUpdate(nextProps: ScrollViewItemProperties) {
