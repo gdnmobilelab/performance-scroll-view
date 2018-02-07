@@ -81,7 +81,6 @@ export class ItemBuffer {
 
         for (let index = startIndex; index < endIndex; index++) {
             let result = this.elementCache.get(index);
-            console.log("get item?", index);
             if (!result) {
                 indexesToFetch.push(index);
             } else {
@@ -109,8 +108,9 @@ export class ItemBuffer {
         });
 
         console.info(
-            `ITEM BUFFER: Returning ${results.size -
-                indexesToFetch.length} cached items, ${indexesToFetch.length} new items`
+            `ITEM BUFFER: Returning ${results.size - indexesToFetch.length} cached items, ${
+                indexesToFetch.length
+            } new items`
         );
         return this.transformMapToOrderedElementArray(results);
     }

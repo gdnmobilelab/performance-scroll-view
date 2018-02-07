@@ -699,4 +699,21 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
             numberOfNewItems: this.shouldResetPendingItemCount() ? 0 : this.state.numberOfNewItems
         });
     }
+
+    recalculatePositions() {
+        // If the element size has changed, we need to redraw all the elements.
+        // In order to do that, we convert our current positions back to pending
+        // positions, then componentDidUpdate() will redraw them.
+
+        let newPending = new Map<number, number>();
+
+        this.state.itemPositions.forEach((val, key) => {
+            newPending.set(key, val.height);
+        });
+
+        this.setState({
+            itemPositions: new Map(),
+            pendingItemRenders: newPending
+        });
+    }
 }

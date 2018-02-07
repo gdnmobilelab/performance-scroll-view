@@ -66,4 +66,5 @@ export declare class PerformanceScrollView extends Component<PerformanceScrollVi
     };
     shouldResetPendingItemCount(): boolean;
     onIdle(): Promise<void>;
+    recalculatePositions(): void;
 }
