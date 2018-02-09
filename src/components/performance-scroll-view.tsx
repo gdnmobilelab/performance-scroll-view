@@ -242,7 +242,8 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
         let moreIndicator = this.props.moreIndicatorGenerator(this.state.numberOfNewItems);
 
         let containerStyles: React.CSSProperties = {
-            position: "absolute"
+            position: "absolute",
+            width: "100%"
         };
 
         if (this.props.addNewItemsTo === AddNewItemsTo.Bottom) {
@@ -465,14 +466,14 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
         }
 
         sortedKeys = sortedKeys.sort((a, b) => a - b);
-        let lastItemIndex = sortedKeys[sortedKeys.length - 1];
+        // let lastItemIndex = sortedKeys[sortedKeys.length - 1];
 
         if (this.props.addNewItemsTo === AddNewItemsTo.Top) {
             // If we're adding new items to the top, we want to reverse the order
             // of our key array so that we render the last index first.
 
             sortedKeys = sortedKeys.reverse();
-            lastItemIndex = sortedKeys[0];
+            // lastItemIndex = sortedKeys[0];
         }
 
         sortedKeys.forEach(currentIndex => {
