@@ -224,7 +224,10 @@ export class DummyScroller extends React.Component<DummyScrollerProps> {
         if (this.props.scrollPosition === this.element!.scrollTop) {
             return;
         }
-        console.info("DUMMY: Changed scroll height to", this.props.height);
+
+        if (oldProps.height !== this.props.height) {
+            console.info("DUMMY: Changed scroll height from", oldProps.height, " to", this.props.height);
+        }
 
         let newPosition = this.props.scrollPosition;
 

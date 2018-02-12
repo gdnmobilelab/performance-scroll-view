@@ -407,10 +407,21 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
                 itemBuffer: newItems
             });
         } else {
+            let newItemPositions = this.state.itemPositions;
+            let newBufferOffset = this.props.numberOfItems - this.props.itemBufferSize;
+
+            if (newBufferOffset > this.state.currentBufferOffset + this.props.itemBufferSize) {
+                // Last minute hack here so need to revisit the logic. But clearing out positions
+                // entirely doesn't seem to work correctly when some of the items in our buffer
+                // will be re-used.
+
+                newItemPositions = new Map();
+            }
+
             this.setState({
                 currentBufferOffset: this.props.numberOfItems - this.props.itemBufferSize,
                 currentScrollPosition: this.state.totalHeight - this.dummyScrollContainer.clientHeight,
-                itemPositions: new Map<number, HeightAndPosition>(),
+                itemPositions: newItemPositions,
                 itemBuffer: newItems
             });
         }
