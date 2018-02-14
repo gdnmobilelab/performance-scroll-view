@@ -144,6 +144,7 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
                 // while the user is scrolling. If they are at the scroll end the items appear
                 // automatically, so we don't add to it.
 
+                
                 numberOfNewItems = nextProps.numberOfItems - this.props.numberOfItems;
             }
 
@@ -152,7 +153,9 @@ export class PerformanceScrollView extends Component<PerformanceScrollViewProper
             this.setState({
                 itemBuffer: newItems,
                 newlyAddedIndexes: newlyAddedIndexes,
-                numberOfNewItems: this.state.numberOfNewItems + numberOfNewItems,
+                // Max of 0 because it'll be negative if we've reduced the number of items, but we
+                // don't want to show that
+                numberOfNewItems: Math.max(0, this.state.numberOfNewItems + numberOfNewItems),
                 totalHeight: this.state.totalHeight - removedHeight,
                 itemPositions: this.state.itemPositions
             });
