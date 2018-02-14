@@ -9,7 +9,7 @@ import { DummyScroller } from "./dummy-scroller";
 const scrollViewStyles: React.CSSProperties = {
     overflow: "hidden",
     position: "relative",
-    background: process.env.NODE_ENV == "development" ? "blue" : undefined
+    // background: process.env.NODE_ENV == "development" ? "blue" : undefined
 };
 
 export enum AddNewItemsTo {

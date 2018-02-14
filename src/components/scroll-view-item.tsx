@@ -5,8 +5,8 @@ const scrollViewItemCSS: React.CSSProperties = {
     position: "absolute",
     transform: "translate3d(-100%,0,0)",
     left: 0,
-    width: "100%",
-    background: process.env.NODE_ENV == "development" ? "red" : undefined
+    width: "100%"
+    // background: process.env.NODE_ENV == "development" ? "red" : undefined
 };
 
 export interface ScrollViewItemProperties {
